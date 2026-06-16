@@ -20,7 +20,16 @@ class TimeoutErrorWithLogs(Exception):
         self.time = time
         self.discovered = discovered
 
+def make_url(title, lang="en"):
+    """將維基百科條目標題轉換為完整的 URL"""
+    encoded_title = urllib.parse.quote(title.replace(" ", "_"))
+    return f"https://{lang}.wikipedia.org/wiki/{encoded_title}"
 
+def get_title_from_url(url):
+    """從維基百科 URL 中萃取出原本的標題"""
+    encoded_title = url.split("/wiki/")[-1].split('#')[0].split('?')[0]
+    return urllib.parse.unquote(encoded_title).replace("_", " ")
+    
 # 新增這個函數：爬蟲也解析 HTML，並套用跟 server.py 一模一樣的過濾邏輯
 def get_fwd_links_html(title, lang="en"):
     encoded_title = urllib.parse.quote(title.replace(" ", "_"))

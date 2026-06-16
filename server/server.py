@@ -41,24 +41,6 @@ def extract_article_text(title):
     return text[:3000]
 #從維基百科頁面提取純文本內容，並限制在3000字以內
 
-def extract_article_text(title):
-    encoded_title = urllib.parse.quote(title)
-    url = f"https://en.wikipedia.org/wiki/{encoded_title}"
-    res = crawler.session.get(url, timeout=10)
-    res.raise_for_status()
-    soup = BeautifulSoup(res.content, 'html.parser')
-
-    main_content = soup.find('div', id='mw-content-text')
-    if not main_content:
-        return ""
-
-    for element in main_content(["script", "style", "sup", "table"]):
-        element.decompose()
-
-    text = ' '.join(main_content.get_text(" ", strip=True).split())
-    return text[:3000]
-
-
 def get_gemini_hint(current_title, target_title, article_text):
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
@@ -180,7 +162,14 @@ def get_wiki_content(title):
 
         return jsonify({'success': True, 'html': str(main_content)})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        app.logger.error(f"Error occurred: {e}")
+        # 因為出錯時 logs, time 等變數可能還沒被建立，所以我們直接給預設值 (例如空的 list 和 0)
+        return jsonify({
+            'error': str(e), 
+            'logs': [], 
+            'time': 0, 
+            'discovered': 0
+        }), 500
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5002, threaded=True, debug=True)
