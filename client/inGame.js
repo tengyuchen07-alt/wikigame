@@ -236,8 +236,30 @@ hintBtn.addEventListener('click', async () => {
     }
 
     function updateProgress() {
-        // 簡單的進度計算：根據步數（最多 20 步為 100%）
-        const progress = Math.min((stepCount / 20) * 100, 100);
-        document.querySelector(".progress-fill").style.width = progress + "%";
-        document.querySelector(".progress-percent").innerText = Math.round(progress) + "%";
+    // 1. 後端傳來的 solutionPath 是 URL 陣列，我們需要把它們轉換成純標題陣列來做比對
+    const solutionTitles = solutionPath.map(url => {
+        const rawTitle = url.split('/wiki/')[1];
+        // 處理編碼與底線，確保格式跟 currentTitle 一致
+        return decodeURIComponent(rawTitle).replace(/_/g, ' ');
+    });
+
+    // 2. 尋找目前所在的頁面，在正確解答路徑中的哪一個位置
+    const currentIndexInSolution = solutionTitles.indexOf(currentTitle);
+
+    let progress = 0;
+    
+    // 如果 currentIndexInSolution 不是 -1，代表玩家目前走在正確的路徑上
+    if (currentIndexInSolution !== -1) {
+        // 分母為 總節點數 - 1 (因為起點的進度應該要是 0%)
+        // Math.max(1, ...) 是為了防止起點等於終點時發生除以零的錯誤
+        const totalSteps = Math.max(1, solutionTitles.length - 1);
+        progress = (currentIndexInSolution / totalSteps) * 100;
+    } else {
+        // 如果目前頁面不在解答路徑中 (偏離軌道)，進度歸 0
+        progress = 0;
     }
+
+    // 3. 更新進度條 UI
+    document.querySelector(".progress-fill").style.width = progress + "%";
+    document.querySelector(".progress-percent").innerText = Math.round(progress) + "%";
+}

@@ -8,6 +8,37 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__, static_folder = '../client', static_url_path = '')
 
+
+def clean_noise(main_content):
+    """統一過濾維基百科網頁上的雜訊，確保爬蟲與玩家看到的畫面一致"""
+    # 1. 移除腳本、樣式、上標(參考文獻[1][2]等)、表格(包含右側的 Infobox)
+    for element in main_content(["script", "style", "sup", "table"]):
+        element.decompose()
+    
+    # 2. 移除維基百科常見的底部導覽列 (navbox)、參考文獻區塊 (reflist) 與編輯按鈕
+    for element in main_content.find_all(['div', 'span'], class_=['reflist', 'navbox', 'infobox', 'metadata', 'mw-editsection']):
+        element.decompose()
+        
+    return main_content
+
+# ---------------------------------------------------------
+# 修改 1：將 extract_article_text 替換成使用 clean_noise
+def extract_article_text(title):
+    encoded_title = urllib.parse.quote(title)
+    url = f"https://en.wikipedia.org/wiki/{encoded_title}"
+    res = crawler.session.get(url, timeout=10)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.content, 'html.parser')
+
+    main_content = soup.find('div', id='mw-content-text')
+    if not main_content:
+        return ""
+
+    # 套用統一過濾器
+    main_content = clean_noise(main_content)
+
+    text = ' '.join(main_content.get_text(" ", strip=True).split())
+    return text[:3000]
 #從維基百科頁面提取純文本內容，並限制在3000字以內
 
 def extract_article_text(title):
@@ -126,24 +157,20 @@ def get_hint():
 @app.route('/api/wiki/<title>')
 def get_wiki_content(title):
     try:
-        encoded_title = urllib.parse.quote(title) #處理中文編碼問題
+        encoded_title = urllib.parse.quote(title)
         url = f"https://en.wikipedia.org/wiki/{encoded_title}"
         res = crawler.session.get(url, timeout=5)
 
         soup = BeautifulSoup(res.content, 'html.parser')
-        # with open('wiki_text.txt', "w", encoding="utf-8") as f:
-        #     f.write(soup.prettify())
-
-
         main_content = soup.find('div', id='mw-content-text')
 
         if not main_content:
-            return jsonify({
-                'success': False,
-                'error': '找不到內文區塊'
-            }), 404
+            return jsonify({'success': False, 'error': '找不到內文區塊'}), 404
         
-        #修復圖片破圖
+        # 套用統一過濾器，確保玩家畫面上不會出現雜訊連結
+        main_content = clean_noise(main_content)
+        
+        # 修復圖片破圖
         for img in main_content.find_all('img'):
             if img.has_attr('src'):
                 if img['src'].startswith('//'):
@@ -151,17 +178,9 @@ def get_wiki_content(title):
                 elif img['src'].startswith('/'):
                     img['src'] = 'https://en.wikipedia.org' + img['src']
 
-        return jsonify({
-            'success': True,
-            'html': str(main_content)
-        });
-    
-
+        return jsonify({'success': True, 'html': str(main_content)})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5002, threaded=True, debug=True)

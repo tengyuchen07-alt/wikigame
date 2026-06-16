@@ -805,3 +805,81 @@ body {
     padding: 14px 40px;
     font-size: 16px;
 }
+/* Wikipedia 原始排版風格還原*/
+#wikiContent {
+    /* 使用維基百科預設的無襯線字體 */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Lato, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #202122;
+    font-size: 15px;
+    text-align: left;
+}
+
+/* 標題設定：使用襯線字體，還原經典的維基感 */
+#wikiContent h1, 
+#wikiContent h2, 
+#wikiContent h3, 
+#wikiContent h4 {
+    font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+    font-weight: normal;
+    color: #000;
+    margin-bottom: 0.25em;
+    margin-top: 1.2em;
+}
+
+/* H1 跟 H2 標題下方要有經典的淺灰色底線 */
+#wikiContent h1, 
+#wikiContent h2 {
+    border-bottom: 1px solid #a2a9b1;
+    padding-bottom: 0.2em;
+}
+
+/* 段落間距 */
+#wikiContent p {
+    margin: 0.5em 0;
+}
+
+/* 維基百科經典的連結藍色 */
+#wikiContent a {
+    color: #0645ad;
+    text-decoration: none;
+    background: none;
+}
+
+/* 點擊過的連結變成紫色 */
+#wikiContent a:visited {
+    color: #0b0080;
+}
+
+/* 滑鼠移過去才顯示底線 */
+#wikiContent a:hover {
+    text-decoration: underline;
+}
+
+/* 列表排版 (縮排與項目符號) */
+#wikiContent ul, 
+#wikiContent ol {
+    margin: 0.3em 0 0 1.6em;
+    padding: 0;
+}
+
+#wikiContent li {
+    margin-bottom: 0.1em;
+}
+
+/* 圖片處理，避免圖片太大撐破畫面 */
+#wikiContent img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 15px 0;
+    border: 1px solid #c8ccd1; /* 給圖片加個淡淡的邊框 */
+}
+
+/* 引用區塊風格 */
+#wikiContent blockquote {
+    border-left: 4px solid #eaecf0;
+    margin: 1em 40px;
+    padding: 0 1em;
+    font-style: italic;
+}

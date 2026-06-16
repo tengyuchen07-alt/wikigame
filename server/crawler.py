@@ -4,6 +4,7 @@ import re
 import urllib.parse
 import random
 from collections import deque
+from bs4 import BeautifulSoup
 
 TIMEOUT = 120  # time limit in seconds for the search
 
@@ -19,15 +20,47 @@ class TimeoutErrorWithLogs(Exception):
         self.time = time
         self.discovered = discovered
 
-def get_title_from_url(url):
-    raw_title = url.split('/')[-1]
-    decoded_title = urllib.parse.unquote(raw_title)
-    return decoded_title.replace("_", " ") # 👈 把底線換成空白
 
-def make_url(title, lang="en"):
-    title_with_underscores = title.replace(" ", "_")
-    encoded_title = urllib.parse.quote(title_with_underscores)
-    return f"https://{lang}.wikipedia.org/wiki/{encoded_title}"
+# 新增這個函數：爬蟲也解析 HTML，並套用跟 server.py 一模一樣的過濾邏輯
+def get_fwd_links_html(title, lang="en"):
+    encoded_title = urllib.parse.quote(title.replace(" ", "_"))
+    url = f"https://{lang}.wikipedia.org/wiki/{encoded_title}"
+    try:
+        res = session.get(url, timeout=5)
+        if res.status_code != 200:
+            time.sleep(0.5)
+            return []
+        
+        soup = BeautifulSoup(res.content, 'html.parser')
+        main_content = soup.find('div', id='mw-content-text')
+        if not main_content:
+            return []
+
+        # 統一過濾維基百科網頁上的雜訊
+        for element in main_content(["script", "style", "sup", "table"]):
+            element.decompose()
+        for element in main_content.find_all(['div', 'span'], class_=['reflist', 'navbox', 'infobox', 'metadata', 'mw-editsection']):
+            element.decompose()
+            
+        links = []
+        for a in main_content.find_all('a', href=True):
+            href = a['href']
+            # 必須是維基百科條目連結，且排除 Help:, Category: 等特殊空間
+            if href.startswith('/wiki/') and ':' not in href:
+                
+                # 🚨 修正重點：把 # (錨點) 和 ? (查詢參數) 後面的字串通通切掉
+                clean_href = href.split('/wiki/')[1].split('#')[0].split('?')[0]
+                
+                # 解碼並把底線換回空白
+                link_title = urllib.parse.unquote(clean_href).replace("_", " ")
+                
+                # 確保不是空字串，且不重複加入
+                if link_title and link_title not in links:
+                    links.append(link_title)
+        return links
+    except Exception as e:
+        print(f"HTML Parsing ERROR for {title}: {e}")
+        return []
 
 #正向api
 def get_fwd_links_api(title, lang="en"):
@@ -97,7 +130,7 @@ def generate_puzzle(steps=2, lang="en"):
             
             for i in range(steps):
                 # 呼叫你寫好的正向 API 抓取目前頁面的所有連結
-                links = get_fwd_links_api(current_title, lang)
+                links = get_fwd_links_html(current_title, lang)
                 
                 # 排除已經走過的節點，避免原地繞圈圈 (例如 A -> B -> A)
                 valid_links = [link for link in links if link not in path_taken]
@@ -156,7 +189,7 @@ def find_path(start_url, target_url):
             log_msg = f"[正向] 探索: {cur_fwd} (深度 {depth_fwd})"
             print(log_msg)
             logs.append(log_msg)
-            links = get_fwd_links_api(cur_fwd, lang) # links = A 能去的點 e.g. [X,Y,Z]
+            links = get_fwd_links_html(cur_fwd, lang) # links = A 能去的點 e.g. [X,Y,Z]
             for next_title in links:
                 #假設next_title = B
                 if next_title in bwd_visit:#相遇
