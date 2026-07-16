@@ -1,4 +1,23 @@
+# Python
 __pycache__/
-server/.venv/
-server/.env
+*.py[cod]
+.pytest_cache/
 .venv/
+venv/
+.uv-cache/
+.uv-python/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*Zone.Identifier*
+
+# Generated data
+server/wiki_text.txt
