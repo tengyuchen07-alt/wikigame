@@ -40,11 +40,36 @@ If the key is absent or Gemini is temporarily unavailable, the game returns a
 deterministic fallback hint based on the generated solution path, so the game
 remains playable.
 
+## Pre-generated puzzle bank
+
+Starting a game reads a verified five-step puzzle from
+`server/data/puzzles.db`; it does not search Wikipedia in real time. The
+runtime rotates through the least-played entries before repeating them.
+
+Build or extend the bank to the target of 150 puzzles:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_puzzle_db.py --target-count 150 --depth 5
+```
+
+The resumable builder uses the Six Degrees of Wikipedia graph to find shortest
+paths, then checks every edge against the live Wikipedia API before saving it.
+Interrupted runs continue from the number of rows already committed.
+The generated database is deployment data and is ignored by Git by default.
+After it reaches 150 entries, deploy it alongside the server or intentionally
+add it with:
+
+```powershell
+git add -f server/data/puzzles.db
+```
+
 ## Project structure
 
 - `client/` contains the static HTML, CSS, and JavaScript.
 - `server/server.py` exposes the Flask routes.
 - `server/crawler.py` contains the Wikipedia API and article-cleaning logic.
 - `server/hints.py` contains Gemini hint generation and fallback behavior.
+- `server/puzzle_store.py` provides SQLite puzzle selection and persistence.
+- `scripts/build_puzzle_db.py` builds the offline puzzle bank.
 
 The repository does not include virtual environments, generated article dumps, or local environment files.

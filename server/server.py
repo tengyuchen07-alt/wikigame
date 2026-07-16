@@ -11,6 +11,7 @@ from requests import RequestException
 
 import crawler
 import hints
+import puzzle_store
 
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT_DIR = ROOT / "client"
@@ -29,17 +30,20 @@ def home():
 @app.get("/find_path")
 def find_path():
     try:
-        puzzle = crawler.generate_puzzle(steps=3)
+        puzzle = puzzle_store.get_random_puzzle(
+            shortest_steps=crawler.PUZZLE_DEPTH,
+        )
         return jsonify(
             {
                 "start_title": puzzle.start_title,
                 "target_title": puzzle.target_title,
                 "path": [crawler.make_url(title) for title in puzzle.path],
+                "shortest_steps": puzzle.shortest_steps,
             }
         )
-    except (RequestException, crawler.WikipediaError) as exc:
-        app.logger.warning("Puzzle generation failed: %s", exc)
-        return jsonify({"error": "Wikipedia is temporarily unavailable."}), 503
+    except puzzle_store.PuzzleStoreError as exc:
+        app.logger.error("Puzzle database unavailable: %s", exc)
+        return jsonify({"error": "The puzzle bank is temporarily unavailable."}), 503
 
 
 @app.get("/api/wiki/<path:title>")
@@ -78,7 +82,15 @@ def hint():
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok"})
+    puzzle_count = puzzle_store.count_puzzles(shortest_steps=crawler.PUZZLE_DEPTH)
+    return jsonify(
+        {
+            "status": "ok",
+            "puzzle_count": puzzle_count,
+            "puzzle_target": puzzle_store.TARGET_PUZZLE_COUNT,
+            "puzzle_bank_ready": puzzle_count >= puzzle_store.TARGET_PUZZLE_COUNT,
+        }
+    )
 
 
 if __name__ == "__main__":

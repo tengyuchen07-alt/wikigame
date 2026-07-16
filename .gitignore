@@ -21,3 +21,7 @@ Thumbs.db
 
 # Generated data
 server/wiki_text.txt
+server/data/*.db
+puzzle-build*.log
+tests/.test-puzzles.db
+/tmp*/

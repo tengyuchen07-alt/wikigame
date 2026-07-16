@@ -6,8 +6,6 @@ Flask so the core behavior is easy to test and reuse.
 
 from __future__ import annotations
 
-import random
-from dataclasses import dataclass
 from urllib.parse import quote, unquote, urlparse
 
 import requests
@@ -25,6 +23,7 @@ API_URL = "https://en.wikipedia.org/w/api.php"
 ARTICLE_URL = "https://en.wikipedia.org/wiki/{title}"
 REQUEST_TIMEOUT = 12
 USER_AGENT = "WikiGame/1.0 (https://github.com/tengyuchen07-alt/wikigame)"
+PUZZLE_DEPTH = 5
 
 session = requests.Session()
 session.headers.update({"User-Agent": USER_AGENT})
@@ -32,13 +31,6 @@ session.headers.update({"User-Agent": USER_AGENT})
 
 class WikipediaError(RuntimeError):
     """Raised when Wikipedia cannot provide usable data."""
-
-
-@dataclass(frozen=True)
-class Puzzle:
-    start_title: str
-    target_title: str
-    path: list[str]
 
 
 def make_url(title: str) -> str:
@@ -62,14 +54,6 @@ def _api_get(**params: object) -> dict:
     )
     response.raise_for_status()
     return response.json()
-
-
-def random_article_title() -> str:
-    data = _api_get(action="query", list="random", rnnamespace=0, rnlimit=1)
-    try:
-        return data["query"]["random"][0]["title"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise WikipediaError("Wikipedia did not return a random article") from exc
 
 
 def get_links(title: str, limit: int = 100) -> list[str]:
@@ -102,25 +86,6 @@ def get_links(title: str, limit: int = 100) -> list[str]:
             break
 
     return links
-
-
-def generate_puzzle(steps: int = 3, attempts: int = 12) -> Puzzle:
-    """Build a guaranteed-solvable puzzle by walking article links."""
-    if steps < 1:
-        raise ValueError("steps must be at least 1")
-
-    for _ in range(attempts):
-        path = [random_article_title()]
-        for _ in range(steps):
-            candidates = [title for title in get_links(path[-1]) if title not in path]
-            if not candidates:
-                break
-            path.append(random.choice(candidates))
-
-        if len(path) == steps + 1:
-            return Puzzle(path[0], path[-1], path)
-
-    raise WikipediaError("Could not generate a playable puzzle")
 
 
 def fetch_article_html(title: str) -> str:
