@@ -13,7 +13,6 @@ let elapsedSeconds = Math.max(0, Math.floor((Date.now() - game.startedAt) / 1000
 const elements = {
   article: document.querySelector("#wiki-content"),
   articleStatus: document.querySelector("#article-status"),
-  backButton: document.querySelector("#back-button"),
   currentTitle: document.querySelector("#current-title"),
   hintButton: document.querySelector("#hint-button"),
   hintText: document.querySelector("#hint-text"),
@@ -26,7 +25,6 @@ const elements = {
 };
 
 elements.targetTitle.textContent = game.targetTitle;
-elements.backButton.addEventListener("click", goBack);
 elements.hintButton.addEventListener("click", showHint);
 
 const timerId = window.setInterval(() => {
@@ -62,7 +60,7 @@ async function loadArticle(title) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (error) {
     console.error(error);
-    elements.articleStatus.textContent = "文章載入失敗，請返回上一頁或重新開始。";
+    elements.articleStatus.textContent = "文章載入失敗，請重新開始遊戲。";
   }
 }
 
@@ -75,7 +73,7 @@ function handleArticleLink(event) {
   event.preventDefault();
   const nextTitle = decodeURIComponent(href.slice(6).split(/[?#]/)[0]).replaceAll("_", " ");
   if (!nextTitle || history.includes(nextTitle)) {
-    elements.hintText.textContent = "這篇文章已經走過了，換一條路試試看。";
+    elements.hintText.textContent = "這篇文章已經走過了，請選擇另一條路。";
     return;
   }
 
@@ -91,19 +89,11 @@ function handleArticleLink(event) {
   }
 }
 
-function goBack() {
-  if (history.length <= 1) return;
-  history.pop();
-  currentTitle = history.at(-1);
-  elements.hintText.textContent = "";
-  renderState();
-  loadArticle(currentTitle);
-}
-
 async function showHint() {
   const index = solutionTitles.indexOf(currentTitle);
   const nextTitle = index >= 0 ? solutionTitles[index + 1] || "" : "";
   elements.hintButton.disabled = true;
+  elements.hintText.textContent = "正在分析目前文章…";
 
   try {
     const query = new URLSearchParams({
@@ -113,7 +103,7 @@ async function showHint() {
     });
     const response = await fetch(`/api/hint?${query}`);
     const data = await response.json();
-    elements.hintText.textContent = data.hint || data.error || "目前沒有提示。";
+    elements.hintText.textContent = data.hint || data.error || "目前沒有可用提示。";
   } catch (error) {
     console.error(error);
     elements.hintText.textContent = "提示暫時無法使用。";
@@ -126,7 +116,6 @@ function renderState() {
   elements.currentTitle.textContent = currentTitle;
   elements.stepCount.textContent = history.length - 1;
   elements.timer.textContent = elapsedSeconds;
-  elements.backButton.disabled = history.length <= 1;
   elements.pathList.replaceChildren(
     ...history.map((title) => {
       const item = document.createElement("li");
@@ -139,7 +128,8 @@ function renderState() {
 
 function finishGame() {
   window.clearInterval(timerId);
-  elements.resultSummary.textContent = `你用了 ${history.length - 1} 步、${elapsedSeconds} 秒完成。`;
+  elements.resultSummary.textContent =
+    `你用了 ${history.length - 1} 步、${elapsedSeconds} 秒完成。`;
   elements.resultDialog.showModal();
   sessionStorage.removeItem("wikiGame");
 }

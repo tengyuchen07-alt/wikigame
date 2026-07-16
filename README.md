@@ -25,6 +25,10 @@ python -m venv .venv
 .\.venv\Scripts\python.exe server\server.py
 ```
 
+VS Code/Pylance reads `pyrightconfig.json` and resolves imports from the
+project-level `.venv`. After creating the environment, run **Developer: Reload
+Window** if Pylance still shows stale import warnings.
+
 ## AI hints
 
 Copy `.env.example` to `.env` and set `GEMINI_API_KEY` to enable Gemini hints.

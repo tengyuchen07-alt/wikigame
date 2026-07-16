@@ -83,5 +83,16 @@ class HintTests(unittest.TestCase):
         self.assertIn("Middle", response.json["hint"])
 
 
+class FrontendTests(unittest.TestCase):
+    def test_game_has_no_back_navigation_control(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        html = (root / "client" / "inGame.html").read_text(encoding="utf-8")
+        script = (root / "client" / "inGame.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("back-button", html)
+        self.assertNotIn("goBack", script)
+        self.assertIn("glass-panel", html)
+
+
 if __name__ == "__main__":
     unittest.main()

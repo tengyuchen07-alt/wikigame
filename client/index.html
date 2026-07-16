@@ -3,18 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="在 Wikipedia 文章之間尋找最短路線的導航遊戲。">
+  <meta name="description" content="在 Wikipedia 文章之間尋找路徑的導航遊戲。">
   <title>Wikipedia Race</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="landing-page">
-  <main class="landing-card">
+  <div class="ambient-orb orb-blue" aria-hidden="true"></div>
+  <div class="ambient-orb orb-purple" aria-hidden="true"></div>
+  <div class="ambient-orb orb-cyan" aria-hidden="true"></div>
+
+  <main class="landing-card glass-panel">
+    <div class="app-icon" aria-hidden="true">W</div>
     <p class="eyebrow">Wiki navigation challenge</p>
     <h1>Wikipedia Race</h1>
-    <p class="lead">從隨機文章出發，只能點擊頁面內的連結，看看你能多快抵達目標。</p>
-    <button id="start-button" class="primary-button" type="button">開始新遊戲</button>
+    <p class="lead">
+      從隨機文章出發，只能沿著頁面內的連結前進，
+      看看你能多快抵達目標文章。
+    </p>
+    <button id="start-button" class="primary-button glass-button" type="button">
+      開始新遊戲
+    </button>
     <p id="start-status" class="status" role="status" aria-live="polite"></p>
   </main>
+
   <script src="index.js" defer></script>
 </body>
 </html>

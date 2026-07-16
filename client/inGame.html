@@ -6,38 +6,45 @@
   <title>進行中 · Wikipedia Race</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header class="game-header">
-    <a class="brand" href="index.html">Wikipedia Race</a>
-    <div class="header-actions">
-      <button id="back-button" class="secondary-button" type="button" disabled>返回上一步</button>
-      <a class="secondary-button" href="index.html">結束遊戲</a>
-    </div>
+<body class="game-page">
+  <div class="ambient-orb orb-blue" aria-hidden="true"></div>
+  <div class="ambient-orb orb-purple" aria-hidden="true"></div>
+  <div class="ambient-orb orb-cyan" aria-hidden="true"></div>
+
+  <header class="game-header glass-bar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true">W</span>
+      Wikipedia Race
+    </a>
+    <a class="secondary-button glass-button" href="index.html">結束遊戲</a>
   </header>
 
   <main class="game-layout">
-    <section class="article-panel" aria-labelledby="current-title">
+    <section class="article-panel glass-panel" aria-labelledby="current-title">
       <div id="article-status" class="article-status" role="status">載入中…</div>
       <article id="wiki-content" class="wiki-content"></article>
     </section>
 
     <aside class="sidebar">
-      <section class="info-card">
+      <section class="info-card glass-panel">
         <p class="label">目前文章</p>
         <h1 id="current-title">—</h1>
+        <div class="glass-divider"></div>
         <p class="label">目標文章</p>
         <p id="target-title" class="target-title">—</p>
       </section>
 
-      <section class="stats-grid" aria-label="遊戲統計">
+      <section class="stats-grid glass-panel" aria-label="遊戲統計">
         <div><span id="step-count">0</span><small>步</small></div>
         <div><span id="timer">0</span><small>秒</small></div>
       </section>
 
-      <section class="info-card">
+      <section class="info-card glass-panel">
         <div class="card-heading">
           <h2>走過的路</h2>
-          <button id="hint-button" class="text-button" type="button">提示</button>
+          <button id="hint-button" class="hint-button glass-button" type="button">
+            取得提示
+          </button>
         </div>
         <ol id="path-list" class="path-list"></ol>
         <p id="hint-text" class="hint-text" role="status"></p>
@@ -45,10 +52,11 @@
     </aside>
   </main>
 
-  <dialog id="result-dialog" class="result-dialog">
+  <dialog id="result-dialog" class="result-dialog glass-panel">
+    <div class="result-icon" aria-hidden="true">✓</div>
     <h2>抵達目標！</h2>
     <p id="result-summary"></p>
-    <a class="primary-button" href="index.html">再玩一次</a>
+    <a class="primary-button glass-button" href="index.html">再玩一次</a>
   </dialog>
 
   <script src="inGame.js" defer></script>
