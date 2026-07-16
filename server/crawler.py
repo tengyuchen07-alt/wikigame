@@ -148,8 +148,17 @@ def fetch_article_html(title: str) -> str:
 
         if tag.name == "a":
             href = tag.get("href", "")
-            if not href.startswith("/wiki/") or ":" in href.split("/wiki/", 1)[1]:
+            parsed = urlparse(href)
+            is_wikipedia_host = not parsed.netloc or parsed.netloc == "en.wikipedia.org"
+            is_article_path = parsed.path.startswith("/wiki/")
+            article_title = unquote(parsed.path.removeprefix("/wiki/"))
+
+            if not is_wikipedia_host or not is_article_path or ":" in article_title:
                 tag.unwrap()
+            else:
+                # Normalize absolute Wikipedia URLs so the browser game can
+                # intercept every playable article link consistently.
+                tag["href"] = parsed.path
         elif tag.name == "img":
             src = tag.get("src", "")
             if src.startswith("//"):
@@ -158,3 +167,10 @@ def fetch_article_html(title: str) -> str:
                 tag["src"] = f"https://en.wikipedia.org{src}"
 
     return str(content)
+
+
+def fetch_article_text(title: str, limit: int = 4000) -> str:
+    """Return readable article text for hint generation."""
+    soup = BeautifulSoup(fetch_article_html(title), "html.parser")
+    text = " ".join(soup.get_text(" ", strip=True).split())
+    return text[:limit]

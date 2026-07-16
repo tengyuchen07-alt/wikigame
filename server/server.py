@@ -5,13 +5,18 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 from requests import RequestException
 
 import crawler
+import hints
 
 ROOT = Path(__file__).resolve().parent.parent
 CLIENT_DIR = ROOT / "client"
+
+load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / "server" / ".env")
 
 app = Flask(__name__, static_folder=str(CLIENT_DIR), static_url_path="")
 
@@ -55,12 +60,20 @@ def hint():
     if not current or not target:
         return jsonify({"success": False, "error": "Current and target titles are required."}), 400
 
-    if next_title:
-        message = f"From {current}, look for a link related to “{next_title}”."
-    else:
-        message = f"You are off the generated route. Look for a broad topic connected to “{target}”."
-
-    return jsonify({"success": True, "hint": message})
+    try:
+        article_text = crawler.fetch_article_text(current)
+        candidate_links = crawler.get_links(current, limit=80)
+        message = hints.generate_ai_hint(
+            current,
+            target,
+            article_text,
+            candidate_links,
+        )
+        return jsonify({"success": True, "hint": message, "source": "ai"})
+    except (RequestException, crawler.WikipediaError, hints.HintError) as exc:
+        app.logger.info("AI hint unavailable, using fallback: %s", exc)
+        message = hints.fallback_hint(current, target, next_title)
+        return jsonify({"success": True, "hint": message, "source": "fallback"})
 
 
 @app.get("/health")
