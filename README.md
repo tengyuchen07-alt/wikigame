@@ -55,6 +55,10 @@ Build or extend the bank to the target of 150 puzzles:
 The resumable builder uses the Six Degrees of Wikipedia graph to find shortest
 paths, then checks every edge against the live Wikipedia API before saving it.
 Interrupted runs continue from the number of rows already committed.
+For variety, starts and complete paths are unique, candidates sharing more than
+two directed edges with an existing puzzle are rejected, and each path lookup
+can contribute at most one puzzle. Existing databases are pruned to these rules
+automatically before a resumed build.
 The generated database is deployment data and is ignored by Git by default.
 After it reaches 150 entries, deploy it alongside the server or intentionally
 add it with:

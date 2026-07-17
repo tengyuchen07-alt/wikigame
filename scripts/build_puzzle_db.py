@@ -142,8 +142,9 @@ def build(
                 if current >= target_count:
                     break
                 groups = fixed_depth_candidates(paths, depth)
+                saved_from_result = False
                 for alternatives in groups.values():
-                    if current >= target_count:
+                    if current >= target_count or saved_from_result:
                         break
                     for path in alternatives:
                         try:
@@ -167,6 +168,7 @@ def build(
                         db_path=db_path,
                     ):
                         current += 1
+                        saved_from_result = True
                         logger.info(
                             "Saved %d/%d: %s",
                             current,

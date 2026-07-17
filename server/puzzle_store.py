@@ -11,6 +11,7 @@ from pathlib import Path
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "data" / "puzzles.db"
 TARGET_PUZZLE_COUNT = 150
+MAX_SHARED_EDGES = 2
 
 
 class PuzzleStoreError(RuntimeError):
@@ -48,6 +49,61 @@ def initialize(db_path: Path = DEFAULT_DB_PATH) -> None:
                     ON puzzles (shortest_steps, play_count);
                 """
             )
+            _prune_low_diversity_puzzles(connection)
+            connection.executescript(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS puzzles_unique_start
+                    ON puzzles (start_title);
+                CREATE UNIQUE INDEX IF NOT EXISTS puzzles_unique_path
+                    ON puzzles (path_json);
+                """
+            )
+
+
+def _path_edges(path: list[str]) -> set[tuple[str, str]]:
+    return set(zip(path, path[1:]))
+
+
+def _is_diverse_path(path: list[str], existing_paths: list[list[str]]) -> bool:
+    candidate_edges = _path_edges(path)
+    for existing in existing_paths:
+        if path[0] == existing[0] or path == existing:
+            return False
+        if len(candidate_edges & _path_edges(existing)) > MAX_SHARED_EDGES:
+            return False
+    return True
+
+
+def _prune_low_diversity_puzzles(connection: sqlite3.Connection) -> int:
+    """Keep the oldest diverse rows when upgrading an existing database."""
+    rows = connection.execute(
+        "SELECT id, path_json FROM puzzles ORDER BY id"
+    ).fetchall()
+    accepted_paths: list[list[str]] = []
+    rejected_ids: list[int] = []
+
+    for puzzle_id, path_json in rows:
+        try:
+            path = json.loads(path_json)
+        except (json.JSONDecodeError, TypeError):
+            rejected_ids.append(puzzle_id)
+            continue
+        if (
+            not isinstance(path, list)
+            or len(path) < 2
+            or not all(isinstance(item, str) for item in path)
+            or not _is_diverse_path(path, accepted_paths)
+        ):
+            rejected_ids.append(puzzle_id)
+            continue
+        accepted_paths.append(path)
+
+    if rejected_ids:
+        connection.executemany(
+            "DELETE FROM puzzles WHERE id = ?",
+            ((puzzle_id,) for puzzle_id in rejected_ids),
+        )
+    return len(rejected_ids)
 
 
 def add_puzzle(
@@ -62,6 +118,24 @@ def add_puzzle(
     initialize(db_path)
     with closing(sqlite3.connect(db_path)) as connection:
         with connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing_rows = connection.execute(
+                "SELECT path_json FROM puzzles"
+            ).fetchall()
+            existing_paths: list[list[str]] = []
+            for (path_json,) in existing_rows:
+                try:
+                    existing_path = json.loads(path_json)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if isinstance(existing_path, list) and all(
+                    isinstance(item, str) for item in existing_path
+                ):
+                    existing_paths.append(existing_path)
+
+            if not _is_diverse_path(path, existing_paths):
+                return False
+
             cursor = connection.execute(
                 """
                 INSERT OR IGNORE INTO puzzles (

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -73,6 +76,73 @@ class PuzzleStoreTests(unittest.TestCase):
             self.assertEqual(
                 puzzle_store.count_puzzles(shortest_steps=5, db_path=db_path),
                 2,
+            )
+        finally:
+            db_path.unlink(missing_ok=True)
+
+    def test_store_rejects_duplicate_start_and_high_edge_overlap(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        db_path = root / "tests" / ".test-puzzles.db"
+        db_path.unlink(missing_ok=True)
+        try:
+            first = ["A", "B", "C", "D", "E", "F"]
+            same_start = ["A", "G", "H", "I", "J", "K"]
+            high_overlap = ["X", "B", "C", "D", "E", "Y"]
+            acceptable = ["M", "N", "C", "D", "P", "Q"]
+
+            self.assertTrue(
+                puzzle_store.add_puzzle(first, source="test", db_path=db_path)
+            )
+            self.assertFalse(
+                puzzle_store.add_puzzle(same_start, source="test", db_path=db_path)
+            )
+            self.assertFalse(
+                puzzle_store.add_puzzle(high_overlap, source="test", db_path=db_path)
+            )
+            self.assertTrue(
+                puzzle_store.add_puzzle(acceptable, source="test", db_path=db_path)
+            )
+            self.assertEqual(
+                puzzle_store.count_puzzles(shortest_steps=5, db_path=db_path),
+                2,
+            )
+        finally:
+            db_path.unlink(missing_ok=True)
+
+    def test_initialize_prunes_an_existing_low_diversity_database(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        db_path = root / "tests" / ".test-puzzles.db"
+        db_path.unlink(missing_ok=True)
+        try:
+            puzzle_store.initialize(db_path)
+            paths = [
+                ["A", "B", "C", "D", "E", "F"],
+                ["A", "G", "H", "I", "J", "K"],
+                ["X", "B", "C", "D", "E", "Y"],
+            ]
+            with closing(sqlite3.connect(db_path)) as connection:
+                with connection:
+                    connection.execute("DROP INDEX puzzles_unique_start")
+                    connection.execute("DROP INDEX puzzles_unique_path")
+                    connection.executemany(
+                        """
+                        INSERT INTO puzzles (
+                            start_title,
+                            target_title,
+                            path_json,
+                            shortest_steps,
+                            source,
+                            verified_at
+                        ) VALUES (?, ?, ?, 5, 'legacy', '2026-01-01')
+                        """,
+                        ((path[0], path[-1], json.dumps(path)) for path in paths),
+                    )
+
+            puzzle_store.initialize(db_path)
+
+            self.assertEqual(
+                puzzle_store.count_puzzles(shortest_steps=5, db_path=db_path),
+                1,
             )
         finally:
             db_path.unlink(missing_ok=True)
